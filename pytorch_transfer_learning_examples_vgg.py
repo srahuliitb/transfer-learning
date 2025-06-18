@@ -33,14 +33,10 @@ set_seed(42) # Using a fixed seed
 
 # --- PART 1: CPU RAM Requiring Tasks (Setup and Data Preprocessing) ---
 # All code in this section primarily uses CPU memory and does not require GPU VRAM.
-# This includes defining paths, loading raw data, splitting, pre-processing,
-# and defining model architectures as blueprints.
-
+# This includes defining paths, loading raw data, splitting, pre-processing, and defining model architectures as blueprints.
 logger.info("--- Part 1: CPU RAM Requiring Tasks (Setup and Data Preprocessing) ---")
-#print("\n--- Part 1: CPU RAM Requiring Tasks (Setup and Data Preprocessing) ---\n")
-
 logger.info("1.1 System Configuration and Data Path Setup (CPU RAM).")
-# print("1.1 System Configuration and Data Path Setup (CPU RAM).")
+
 root = '101_ObjectCategories'
 exclude = ['BACKGROUND_Google', 'Motorbikes', 'airplanes', 'Faces_easy', 'Faces']
 train_split, val_split = 0.7, 0.15
@@ -52,12 +48,9 @@ categories_paths = [c for c in categories_paths if c not in [os.path.join(root, 
 categories = [os.path.basename(p) for p in categories_paths]
 category_to_idx = {name: i for i, name in enumerate(categories)}
 idx_to_category = {i: name for i, name in enumerate(categories)}
-
 logger.info(f"Image categories: {categories}")
-# print(f"  Image categories: {categories}\n")
 
 logger.info("1.2 Custom Dataset Class Definition (CPU RAM - blueprint only).")
-# print("1.2 Custom Dataset Class Definition (CPU RAM - blueprint only).")
 class Caltech101Dataset(Dataset):
     def __init__(self, data_list, transform=None):
         self.data_list = data_list
@@ -79,9 +72,8 @@ class Caltech101Dataset(Dataset):
         return img, label
 
 logger.info("1.3 Image transformations setup (CPU RAM).")
-# print("1.3 Image transformations setup (CPU RAM).")
-# Define transformations. These are applied on the CPU when data is loaded,
-# before being potentially moved to GPU.
+
+# Define transformations. These are applied on the CPU when data is loaded,before being potentially moved to GPU.
 preprocess_transform = transforms.Compose([
     transforms.Resize((224, 224)),  # Resize images to VGG16 input size
     transforms.ToTensor(),         # Converts to PyTorch Tensor (HWC to CHW, 0-255 to 0-1)
@@ -89,9 +81,8 @@ preprocess_transform = transforms.Compose([
 ])
 
 logger.info("1.4 Loading and processing all image data paths (CPU RAM).")
-# print("1.4 Loading and processing all image data paths (CPU RAM).")
-# We only store paths and labels here to avoid loading all images into RAM at once.
-# Images will be loaded on-the-fly by the DataLoader.
+
+# Store only paths and labels here to avoid loading all images into RAM at once. Images will be loaded on-the-fly by the DataLoader.
 all_image_paths_and_labels = []
 for c, category_path in enumerate(categories_paths):
     images_in_category = [os.path.join(dp, f) for dp, dn, filenames
@@ -104,11 +95,8 @@ num_classes = len(categories)
 
 logger.info(f"Total number of image classes considered = {num_classes}")
 logger.info(f"Total number of images found: {len(all_image_paths_and_labels)}")
-# print(f"  Total number of image classes considered = {num_classes}\n")
-# print(f"  Total number of images found: {len(all_image_paths_and_labels)}\n")
 
 logger.info("1.5 Shuffling and splitting data paths (CPU RAM).")
-# print("1.5 Shuffling and splitting data paths (CPU RAM).")
 random.shuffle(all_image_paths_and_labels) # Randomise the data order
 
 # create training / validation / test split (70%, 15%, 15%)
@@ -121,12 +109,9 @@ test_data_list = all_image_paths_and_labels[idx_test:]
 logger.info("Summary:")
 logger.info("Finished collecting %d image paths from %d categories"%(len(all_image_paths_and_labels), num_classes))
 logger.info("Train / validation / test split (counts): %d, %d, %d"%(len(train_data_list), len(val_data_list), len(test_data_list)))
-# print("  Summary:")
-# print("  Finished collecting %d image paths from %d categories"%(len(all_image_paths_and_labels), num_classes))
-# print("  Train / validation / test split (counts): %d, %d, %d"%(len(train_data_list), len(val_data_list), len(test_data_list)))
 
 logger.info("1.6 Creating Dataset and DataLoader objects (CPU RAM).")
-# print("\n1.6 Creating Dataset and DataLoader objects (CPU RAM).")
+
 # These objects are created on CPU and manage the loading of data.
 train_dataset = Caltech101Dataset(train_data_list, transform=preprocess_transform)
 val_dataset = Caltech101Dataset(val_data_list, transform=preprocess_transform)
@@ -136,17 +121,14 @@ train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_worke
 val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=os.cpu_count()//2 or 1)
 test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=os.cpu_count()//2 or 1)
 logger.info("DataLoaders created. Images will be loaded in batches during training/evaluation.")
-# print("  DataLoaders created. Images will be loaded in batches during training/evaluation.")
-
 
 logger.info("1.7 Sequential Model Architecture Definition (CPU RAM - blueprint only).")
-# print("\n1.7 Sequential Model Architecture Definition (CPU RAM - blueprint only).")
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes):
         super(SimpleCNN, self).__init__()
         # Input: (batch_size, 3, 224, 224)
         self.features = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, padding=1), # (224-3+2*1)/1 + 1 = 224 -> (32, 224, 224)
+            nn.Conv2d(3, 32, kernel_size=3, padding=1), # (224 - 3 + 2 * 1)/1 + 1 = 224 -> (32, 224, 224)
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2), # 224/2 = 112 -> (32, 112, 112)
 
@@ -182,35 +164,25 @@ class SimpleCNN(nn.Module):
 model_sequential = SimpleCNN(num_classes)
 logger.info(f"Sequential model architecture (CPU RAM):")
 logger.info(model_sequential)
-# print(f"\n  Sequential model architecture (CPU RAM):\n")
-# print(model_sequential)
 
 logger.info("--- Part 2: GPU VRAM and/or CPU RAM Requiring Tasks (Training and Evaluation) ---")
 logger.info("This section involves operations that leverage GPU if available, or fall back to CPU.")
-# print("\n--- Part 2: GPU VRAM and/or CPU RAM Requiring Tasks (Training and Evaluation) ---\n")
-# print("This section involves operations that leverage GPU if available, or fall back to CPU.")
 
 # Check for GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logger.info(f"Using device: {device}. If 'cuda', GPU VRAM will be used for computations.")
-# print(f"  Using device: {device}. If 'cuda', GPU VRAM will be used for computations.")
+logger.info("2.1 Moving Sequential Model to Device (REQUIRES GPU VRAM if 'cuda').")
 
-logger.info("\n2.1 Moving Sequential Model to Device (REQUIRES GPU VRAM if 'cuda').")
-# print("\n2.1 Moving Sequential Model to Device (REQUIRES GPU VRAM if 'cuda').")
 # This is the first point where GPU RAM might be allocated for model_sequential parameters.
 model_sequential.to(device)
-logger.info(f"  Sequential model moved to {device}.")
-# print(f"  Sequential model moved to {device}.")
+logger.info(f"Sequential model moved to {device}.")
 
 logger.info("2.2 Defining Loss Function and Optimizer for Sequential Model (CPU RAM, but operates on GPU if model is there).")
-# print("2.2 Defining Loss Function and Optimizer for Sequential Model (CPU RAM, but operates on GPU if model is there).")
 criterion = nn.CrossEntropyLoss()
 optimizer_sequential = optim.Adam(model_sequential.parameters(), lr=0.001)
 logger.info("Loss function and optimizer defined.")
-# print("  Loss function and optimizer defined.")
 
-logger.info("\n2.3 Training the Sequential Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
-# print("\n2.3 Training the Sequential Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
+logger.info("2.3 Training the Sequential Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
 num_epochs = 10 # Match the 10 epochs from Keras example
 history_sequential = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy': []}
 
@@ -236,14 +208,12 @@ for epoch in range(num_epochs):
 
         if batch_idx % 50 == 0: # Print less frequently than Keras due to smaller dataset
             logger.info(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
-            # print(f"    Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
 
     epoch_loss = running_loss / len(train_dataset)
     epoch_accuracy = correct_train / total_train
     history_sequential['loss'].append(epoch_loss)
     history_sequential['accuracy'].append(epoch_accuracy)
     logger.info(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
-    # print(f"  Epoch {epoch+1} Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_accuracy:.4f}")
 
     # Validation phase
     model_sequential.eval()
@@ -265,13 +235,10 @@ for epoch in range(num_epochs):
     history_sequential['val_loss'].append(val_loss_avg)
     history_sequential['val_accuracy'].append(val_accuracy)
     logger.info(f"Epoch {epoch+1} Val Loss: {val_loss_avg:.4f}, Val Acc: {val_accuracy:.4f}")
-    # print(f"  Epoch {epoch+1} Val Loss: {val_loss_avg:.4f}, Val Acc: {val_accuracy:.4f}")
 
-logger.info("\nSequential model training complete. GPU VRAM/CPU RAM was utilized for computations.")
-# print("\n  Sequential model training complete. GPU VRAM/CPU RAM was utilized for computations.")
+logger.info("Sequential model training complete. GPU VRAM/CPU RAM was utilized for computations.")
 
-logger.info("\n2.4 Evaluating the Sequential Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
-# print("\n2.4 Evaluating the Sequential Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
+logger.info("2.4 Evaluating the Sequential Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
 model_sequential.eval()
 test_loss = 0.0
 correct_test = 0
@@ -291,46 +258,36 @@ final_test_accuracy = correct_test / total_test
 
 logger.info(f'Sequential Model Test loss: {final_test_loss:.4f}')
 logger.info(f'Sequential Model Test accuracy: {final_test_accuracy:.4f}')
-# print(f'  Sequential Model Test loss: {final_test_loss:.4f}')
-# print(f'  Sequential Model Test accuracy: {final_test_accuracy:.4f}')
 
 # --- Transfer Learning Section ---
-logger.info("\n2.5 Loading VGG16 Pre-trained Model (Downloads to CPU, then moved to GPU).")
-# print("\n2.5 Loading VGG16 Pre-trained Model (Downloads to CPU, then moved to GPU).")
+logger.info("2.5 Loading VGG16 Pre-trained Model (Downloads to CPU, then moved to GPU).")
 # PyTorch's VGG16 with pre-trained ImageNet weights
 vgg16 = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
 logger.info(f"\nVGG16 Model loaded (initially CPU RAM, parameters transfer to GPU when moved).\n")
-logger.info(vgg16)
-# print(f"\n  VGG16 Model loaded (initially CPU RAM, parameters transfer to GPU when moved).\n")
-# print(vgg16) # Uncomment for full VGG16 summary
+logger.info(vgg16) # Full VGG16 summary
+# print(vgg16) # Full VGG16 summary
 
 logger.info("\n2.6 Building New Transfer Learning Model with VGG16 as backbone (CPU RAM blueprint, GPU VRAM for actual use).")
-# print("\n2.6 Building New Transfer Learning Model with VGG16 as backbone (CPU RAM blueprint, GPU VRAM for actual use).")
 # Freeze all parameters in the VGG16 feature extractor
 for param in vgg16.parameters():
     param.requires_grad = False
 
 # Replace the classifier head with a new one for our number of classes
-num_ftrs = vgg16.classifier[6].in_features # Get input features to the last FC layer
+num_ftrs = vgg16.classifier[6].in_features # Get input features to the last Fully Connected (FC) layer
 vgg16.classifier[6] = nn.Linear(num_ftrs, num_classes) # Replace last layer
 
 # Move the VGG16 model (with new head) to the device
 model_transfer = vgg16.to(device)
 logger.info(f"Transfer learning model moved to {device}.")
-logger.info(f"\n  Transfer learning model architecture (new head added, others frozen):\n")
+logger.info(f"Transfer learning model architecture (new head added, others frozen):")
 logger.info(model_transfer)
-# print(f"  Transfer learning model moved to {device}.")
-# print(f"\n  Transfer learning model architecture (new head added, others frozen):\n")
-# print(model_transfer)
 
-logger.info("\n2.7 Defining Optimizer for Transfer Learning Model (only last layer trainable).")
-# print("\n2.7 Defining Optimizer for Transfer Learning Model (only last layer trainable).")
+logger.info("2.7 Defining Optimizer for Transfer Learning Model (only last layer trainable).")
 # Only parameters of the new classifier head are trainable
 optimizer_transfer = optim.Adam(model_transfer.parameters(), lr=0.001)
 # Note: criterion (CrossEntropyLoss) remains the same
 
-logger.info("\n2.8 Training the Transfer Learning Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
-# print("\n2.8 Training the Transfer Learning Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
+logger.info("2.8 Training the Transfer Learning Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
 history_transfer = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy': []}
 
 for epoch in range(num_epochs):
@@ -354,14 +311,12 @@ for epoch in range(num_epochs):
 
         if batch_idx % 50 == 0:
             logger.info(f"Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
-            # print(f"    Epoch [{epoch+1}/{num_epochs}], Batch [{batch_idx}/{len(train_loader)}], Loss: {loss.item():.4f}")
 
     epoch_loss = running_loss / len(train_dataset)
     epoch_accuracy = correct_train / total_train
     history_transfer['loss'].append(epoch_loss)
     history_transfer['accuracy'].append(epoch_accuracy)
     logger.info(f"Epoch {epoch+1} Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_accuracy:.4f}")
-    # print(f"  Epoch {epoch+1} Train Loss: {epoch_loss:.4f}, Train Acc: {epoch_accuracy:.4f}")
 
     # Validation phase for transfer learning model
     model_transfer.eval()
@@ -383,13 +338,10 @@ for epoch in range(num_epochs):
     history_transfer['val_loss'].append(val_loss_avg)
     history_transfer['val_accuracy'].append(val_accuracy)
     logger.info(f"Epoch {epoch+1} Val Loss: {val_loss_avg:.4f}, Val Acc: {val_accuracy:.4f}")
-    # print(f"  Epoch {epoch+1} Val Loss: {val_loss_avg:.4f}, Val Acc: {val_accuracy:.4f}")
 
-logger.info("\nTransfer learning model training complete. GPU VRAM/CPU RAM was utilized.")
-# print("\n  Transfer learning model training complete. GPU VRAM/CPU RAM was utilized.")
+logger.info("Transfer learning model training complete. GPU VRAM/CPU RAM was utilized.")
 
-logger.info("\n2.9 Evaluating the Transfer Learning Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
-# print("\n2.9 Evaluating the Transfer Learning Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
+logger.info("2.9 Evaluating the Transfer Learning Model (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
 model_transfer.eval()
 test_loss_transfer = 0.0
 correct_test_transfer = 0
@@ -408,11 +360,8 @@ final_test_loss_transfer = test_loss_transfer / len(test_dataset)
 final_test_accuracy_transfer = correct_test_transfer / total_test_transfer
 logger.info(f'Transfer Learning Model Test loss: {final_test_loss_transfer:.4f}')
 logger.info(f'Transfer Learning Model Test accuracy: {final_test_accuracy_transfer:.4f}')
-# print(f'  Transfer Learning Model Test loss: {final_test_loss_transfer:.4f}')
-# print(f'  Transfer Learning Model Test accuracy: {final_test_accuracy_transfer:.4f}')
 
 logger.info("\n2.10 Making Predictions (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
-# print("\n2.10 Making Predictions (REQUIRES GPU VRAM if available, otherwise CPU RAM).")
 # Load a single image for prediction
 sample_img_path = os.path.join(root, 'airplanes', 'image_0003.jpg')
 sample_img = Image.open(sample_img_path).convert('RGB')
@@ -426,22 +375,14 @@ with torch.no_grad():
     probabilities = torch.softmax(output, dim=1)
 
 logger.info(f"Prediction probabilities for sample image: {probabilities.cpu().numpy()}")
-# print(f"  Prediction probabilities for sample image: {probabilities.cpu().numpy()}")
 predicted_class_idx = torch.argmax(probabilities, dim=1).item()
 predicted_category_name = idx_to_category[predicted_class_idx]
 logger.info(f"Predicted class: {predicted_category_name} (Index: {predicted_class_idx})")
-# print(f"  Predicted class: {predicted_category_name} (Index: {predicted_class_idx})")
-
 
 # --- Visualisation (Primarily CPU RAM) ---
-# This part is about plotting and saving figures, which typically uses CPU RAM.
-# It can be placed after all training/evaluation.
-logger.info("\n--- Visualisation (Primarily CPU RAM) ---\n")
-# print("\n--- Visualisation (Primarily CPU RAM) ---\n")
-
+# This part is about plotting and saving figures, which typically uses CPU RAM. It can be placed after all training/evaluation.
+logger.info("--- Visualisation (Primarily CPU RAM) ---")
 logger.info("Plotting training history for sequential model and transfer learning model comparison (CPU RAM).")
-# print("Plotting training history for sequential model and transfer learning model comparison (CPU RAM).")
-
 plt.figure(figsize=(16, 6))
 
 # Plot Validation Loss
@@ -466,12 +407,9 @@ plt.legend()
 plt.tight_layout()
 plt.savefig("pytorch_model_comparison.png")
 logger.info("Plots saved to pytorch_model_comparison.png.")
-# print("  Plots saved to pytorch_model_comparison.png.")
 
 logger.info("\nVisualising sample images (CPU RAM).")
-# print("\nVisualising sample images (CPU RAM).")
-# Visualise a few images from the dataset (CPU RAM)
-# Get paths for 8 random images for visualization
+# Visualise a few images from the dataset (CPU RAM). Get paths for 8 random images for visualization
 sample_image_paths = [img_info['path'] for img_info in random.sample(all_image_paths_and_labels, 8)]
 
 imgs_to_show = []
@@ -481,7 +419,6 @@ for p in sample_image_paths:
         imgs_to_show.append(np.array(img.resize((224, 224)))) # Resize for consistent display
     except Exception as e:
         log.error(f"Could not load image {p}: {e}")
-        # print(f"Could not load image {p}: {e}")
         continue
 
 if imgs_to_show:
@@ -491,9 +428,7 @@ if imgs_to_show:
     plt.title("Sample Images from Dataset")
     plt.axis('off') # Hide axes
     plt.savefig('pytorch_caltech_images_sample.png')
-    # print("  Sample image visualization saved to pytorch_caltech_images_sample.png.")
     logger.info("Sample image visualization saved to pytorch_caltech_images_sample.png.")
 else:
     logger.info("No sample images could be loaded for visualization.")
-    # print("  No sample images could be loaded for visualization.")
 
